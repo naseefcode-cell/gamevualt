@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>GameVault OS</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #000000;
+    --widget-bg: rgba(15, 15, 20, 0.7);
+    --border-glass: rgba(255, 255, 255, 0.08);
+    --text: #ffffff;
+    --text-muted: #8b8b93;
+    --accent: #0070d1;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+  
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ─── BOOT SCREEN ─── */
+  #boot-screen {
+    position: fixed; inset: 0;
+    background: radial-gradient(circle at 50% 50%, #1a1a24 0%, #000 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    z-index: 1000; transition: opacity 0.8s ease; cursor: pointer;
+  }
+  .particles { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+  .particle {
+    position: absolute; width: 4px; height: 4px; background: #fff; border-radius: 50%;
+    opacity: 0; box-shadow: 0 0 10px 2px rgba(255, 255, 255, 0.5);
+    animation: floatUp 4s infinite linear;
+  }
+  @keyframes floatUp {
+    0% { transform: translateY(100vh) scale(0); opacity: 0; }
+    20% { opacity: 0.8; }
+    80% { opacity: 0.8; }
+    100% { transform: translateY(-100px) scale(1.5); opacity: 0; }
+  }
+  .ps-logo-btn {
+    width: 80px; height: 80px; border-radius: 50%;
+    border: 3px solid #fff; display: flex; align-items: center; justify-content: center;
+    margin-bottom: 20px; transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .ps-logo-btn svg { width: 40px; height: 40px; fill: #fff; }
+  #boot-screen:hover .ps-logo-btn { transform: scale(1.05); box-shadow: 0 0 20px rgba(255,255,255,0.3); }
+  .boot-text { font-size: 14px; font-weight: 500; letter-spacing: 1px; color: #ccc; }
+
+  /* ─── MAIN UI ─── */
+  #main-ui { opacity: 0; transition: opacity 0.5s ease; height: 100vh; display: flex; flex-direction: column; }
+  #main-ui.active { opacity: 1; }
+
+  .bg-container {
+    position: absolute; inset: 0; z-index: 1;
+    background-size: cover; background-position: center top;
+    transition: background-image 0.5s ease, background-color 0.5s ease, filter 0.3s ease;
+  }
+  .bg-overlay {
+    position: absolute; inset: 0; z-index: 2;
+    background: linear-gradient(to right, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 35%, rgba(0,0,0,0) 70%),
+                linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0) 40%);
+  }
+
+  /* Top Bar */
+  .top-bar {
+    position: relative; z-index: 10;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 40px; height: 80px;
+  }
+  .nav-tabs { display: flex; gap: 20px; font-size: 18px; font-weight: 500; }
+  .nav-tab { color: var(--text-muted); cursor: pointer; transition: color 0.2s; }
+  .nav-tab.active { color: #fff; font-weight: 600; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+  
+  .sys-icons { display: flex; align-items: center; gap: 20px; color: var(--text-muted); }
+  .sys-icons svg { width: 20px; height: 20px; fill: currentColor; cursor: pointer; transition: color 0.2s, transform 0.2s; }
+  .sys-icons svg:hover { color: #fff; transform: scale(1.1); }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: #333; overflow: hidden; cursor: pointer; transition: transform 0.2s; border: 2px solid transparent; }
+  .avatar:hover { transform: scale(1.1); border-color: rgba(255,255,255,0.5); }
+  .avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .clock { font-size: 16px; font-weight: 500; color: #fff; margin-left: 10px; transition: opacity 0.3s; }
+  .clock.hidden { opacity: 0; }
+
+  /* Carousel */
+  .carousel-container {
+    position: relative; z-index: 10;
+    padding: 10px 40px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .carousel { 
+    display: flex; gap: 14px; align-items: center; 
+    overflow-x: auto; scrollbar-width: none; padding: 10px 0;
+    scroll-behavior: smooth;
+  }
+  .carousel::-webkit-scrollbar { display: none; }
+  
+  .carousel-item {
+    flex: 0 0 72px; width: 72px; height: 72px; border-radius: 12px;
+    background: rgba(255,255,255,0.1); background-size: cover; background-position: center;
+    cursor: pointer; transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
+    border: 2px solid transparent; position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .carousel-item:hover { transform: scale(1.05); }
+  .carousel-item.active {
+    transform: scale(1.15); border-color: #fff; z-index: 5;
+    box-shadow: 0 0 0 2px rgba(255,255,255,0.1), 0 10px 20px rgba(0,0,0,0.6);
+  }
+  .carousel-item svg { width: 30px; height: 30px; fill: rgba(255,255,255,0.8); }
+  
+  .fallback-cover {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; font-weight: 800; color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+  }
+
+  .selected-title { font-size: 14px; font-weight: 500; color: #fff; margin-left: 4px; text-shadow: 0 2px 5px rgba(0,0,0,0.8); }
+
+  /* Content Area */
+  .content-area { flex: 1; position: relative; z-index: 10; display: flex; flex-direction: column; justify-content: flex-end; padding: 0 40px 40px 40px; }
+
+  /* Hero */
+  .hero { max-width: 600px; margin-bottom: 40px; transition: opacity 0.3s ease; }
+  .hero h1 { font-size: 56px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; text-transform: uppercase; text-shadow: 0 4px 20px rgba(0,0,0,0.8); margin-bottom: 12px; }
+  .hero p { font-size: 16px; color: #ccc; margin-bottom: 24px; text-shadow: 0 2px 10px rgba(0,0,0,0.8); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .actions { display: flex; gap: 16px; align-items: center; }
+  .btn-play {
+    background: #fff; color: #000; font-size: 16px; font-weight: 600;
+    padding: 12px 48px; border-radius: 99px; border: none; cursor: pointer;
+    transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .btn-play:hover { transform: scale(1.02); box-shadow: 0 0 20px rgba(255,255,255,0.4); }
+  .btn-icon {
+    width: 44px; height: 44px; border-radius: 50%; background: rgba(255,255,255,0.2);
+    border: none; color: #fff; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 18px; backdrop-filter: blur(10px); transition: all 0.2s;
+  }
+  .btn-icon:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+  .btn-icon.active { color: #ff6b9d; background: rgba(255, 107, 157, 0.2); }
+
+  /* Widgets */
+  .widgets-grid { display: flex; gap: 16px; overflow-x: auto; padding-bottom: 10px; scrollbar-width: none; }
+  .widgets-grid::-webkit-scrollbar { display: none; }
+  
+  .widget {
+    flex: 0 0 300px; background: var(--widget-bg); border: 1px solid var(--border-glass);
+    border-radius: 16px; padding: 16px; backdrop-filter: blur(20px);
+    display: flex; flex-direction: column; gap: 12px;
+    transition: background 0.2s; position: relative;
+  }
+  .widget:hover { background: rgba(30, 30, 40, 0.85); }
+  .widget-header { display: flex; justify-content: space-between; align-items: center; font-size: 13px; font-weight: 600; color: #fff; }
+  .widget-header svg { width: 16px; height: 16px; fill: #fff; opacity: 0.7; }
+  
+  .widget-games { display: flex; gap: 8px; overflow: hidden; }
+  .widget-game-cover {
+    width: 60px; height: 60px; border-radius: 8px; background-size: cover; background-position: center;
+    flex-shrink: 0; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; transition: transform 0.2s;
+  }
+  .widget-game-cover:hover { transform: scale(1.05); }
+  
+  .storage-bar { width: 100%; height: 6px; background: #333; border-radius: 3px; overflow: hidden; display: flex; margin-top: 8px; }
+  .storage-fill { height: 100%; background: #0070d1; }
+  .storage-text { font-size: 12px; color: #aaa; margin-top: 4px; display: flex; justify-content: space-between; }
+
+  .btn-action {
+    background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 16px; border-radius: 99px; font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background 0.2s; width: 100%; display: flex; justify-content: center; align-items: center; gap: 8px;
+  }
+  .btn-action:hover { background: rgba(255,255,255,0.2); }
+  .btn-action:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ─── OVERLAYS (Profile & Settings) ─── */
+  .overlay {
+    position: fixed; inset: 0; z-index: 600;
+    background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(15px);
+    display: none; opacity: 0; transition: opacity 0.3s ease;
+    align-items: center; justify-content: center;
+  }
+  .overlay.active { display: flex; opacity: 1; }
+  
+  .overlay-panel {
+    background: linear-gradient(180deg, rgba(30,30,35,0.95) 0%, rgba(15,15,20,0.95) 100%);
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 24px;
+    width: 100%; max-width: 500px; padding: 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.8), 0 0 100px rgba(0,168,255,0.05);
+    transform: translateY(20px); transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1);
+    position: relative;
+  }
+  .overlay.active .overlay-panel { transform: translateY(0); }
+  
+  .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+  .panel-header h2 { font-size: 24px; font-weight: 700; }
+  .close-btn { background: rgba(255,255,255,0.1); border: none; width: 36px; height: 36px; border-radius: 50%; color: #fff; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; transition: background 0.2s; }
+  .close-btn:hover { background: rgba(255,255,255,0.2); }
+  
+  /* Profile specific */
+  .profile-top { display: flex; gap: 24px; align-items: center; margin-bottom: 32px; }
+  .profile-avatar-large { width: 96px; height: 96px; border-radius: 50%; border: 3px solid var(--accent); background: #222; overflow: hidden; }
+  .profile-avatar-large img { width: 100%; height: 100%; object-fit: cover; }
+  .profile-info { flex: 1; }
+  .profile-info label { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; display: block; }
+  .input-field { width: 100%; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: #fff; padding: 12px 16px; border-radius: 12px; font-size: 16px; outline: none; transition: border-color 0.2s; }
+  .input-field:focus { border-color: var(--accent); }
+  
+  .btn-secondary { background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 99px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 12px; }
+  .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+  
+  .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+  .stat-box { background: rgba(255,255,255,0.05); padding: 16px; border-radius: 12px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+  .stat-box h3 { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+  .stat-box p { font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+  
+  /* Settings specific */
+  .settings-group { margin-bottom: 24px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 24px; }
+  .settings-group:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+  .settings-group h3 { font-size: 14px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; font-weight: 700; }
+  
+  .setting-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .setting-row:last-child { margin-bottom: 0; }
+  .setting-label { font-size: 15px; font-weight: 500; }
+  .setting-desc { font-size: 12px; color: var(--text-muted); }
+  
+  /* Custom Toggle Switch */
+  .toggle { position: relative; width: 44px; height: 24px; background: #333; border-radius: 12px; cursor: pointer; transition: background 0.3s; border: none; }
+  .toggle::after { content: ''; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; background: #fff; border-radius: 50%; transition: transform 0.3s cubic-bezier(0.2, 0, 0, 1); }
+  .toggle.active { background: var(--accent); }
+  .toggle.active::after { transform: translateX(20px); }
+  
+  .btn-danger { background: rgba(255, 107, 157, 0.15); color: #ff6b9d; border: 1px solid rgba(255, 107, 157, 0.3); padding: 10px 20px; border-radius: 99px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; width: 100%; margin-top: 12px; }
+  .btn-danger:hover { background: rgba(255, 107, 157, 0.25); }
+
+  /* ─── BROWSE SCREEN ─── */
+  #browse-screen {
+    position: fixed; inset: 0; z-index: 500; background: var(--bg);
+    padding: 100px 40px 40px; overflow-y: auto; display: none;
+    background: linear-gradient(to bottom, #0a0a0a, #000);
+  }
+  #browse-screen.active { display: block; animation: fadeIn 0.3s ease; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  
+  .browse-header { 
+    position: fixed; top: 0; left: 0; right: 0; padding: 20px 40px; 
+    background: rgba(0,0,0,0.8); backdrop-filter: blur(20px); z-index: 501;
+    display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-glass);
+  }
+  .browse-header h2 { font-size: 24px; font-weight: 700; }
+  .search-input { 
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; 
+    padding: 10px 20px; border-radius: 99px; outline: none; width: 300px; font-size: 14px;
+  }
+  .search-input:focus { border-color: #fff; }
+  
+  .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 24px; margin-top: 20px; }
+  .grid-item { display: flex; flex-direction: column; gap: 8px; cursor: pointer; transition: transform 0.2s; }
+  .grid-item:hover { transform: scale(1.03); }
+  .grid-cover { 
+    aspect-ratio: 3/4; border-radius: 12px; background: #222; background-size: cover; background-position: center; 
+    border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;
+    font-size: 32px; font-weight: 800; color: rgba(255,255,255,0.2);
+  }
+  .grid-title { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* Toast */
+  #toast {
+    position: fixed; bottom: 40px; right: 40px; z-index: 999;
+    background: rgba(255,255,255,0.1); backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,0.2); padding: 16px 24px; border-radius: 12px;
+    font-size: 14px; font-weight: 500; transform: translateY(100px); opacity: 0;
+    transition: all 0.3s cubic-bezier(0.2, 0, 0, 1); pointer-events: none;
+  }
+  #toast.show { transform: translateY(0); opacity: 1; }
+</style>
+</head>
+<body>
+
+<!-- BOOT SCREEN -->
+<div id="boot-screen" onclick="wakeSystem()">
+  <div class="particles" id="particles"></div>
+  <div class="ps-logo-btn">
+    <svg viewBox="0 0 50 50"><path d="M25 5C14 5 5 14 5 25s9 20 20 20 20-9 20-20S36 5 25 5zm0 35c-8.3 0-15-6.7-15-15S16.7 10 25 10s15 6.7 15 15-6.7 15-15 15zm2.5-21.5v10h-5v-10h5z"/></svg>
+  </div>
+  <div class="boot-text">Press the PS button on your controller</div>
+</div>
+
+<!-- MAIN UI -->
+<div id="main-ui">
+  <div class="bg-container" id="hero-bg"></div>
+  <div class="bg-overlay"></div>
+
+  <header class="top-bar">
+    <div class="nav-tabs">
+      <div class="nav-tab active">Games</div>
+      <div class="nav-tab">Media</div>
+    </div>
+    
+    <div class="sys-icons">
+      <!-- Search -->
+      <svg viewBox="0 0 24 24" onclick="openBrowse()"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+      <!-- Settings -->
+      <svg viewBox="0 0 24 24" onclick="openSettings()"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.44-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+      <!-- Profile Avatar -->
+      <div class="avatar" onclick="openProfile()"><img id="top-avatar" src="" alt="User"></div>
+      <!-- Clock -->
+      <div class="clock" id="clock">12:00 PM</div>
+    </div>
+  </header>
+
+  <div class="carousel-container">
+    <div class="carousel" id="carousel"></div>
+    <div class="selected-title" id="selected-title">Loading...</div>
+  </div>
+
+  <div class="content-area">
+    <div class="hero" id="hero-content">
+      <h1 id="hero-title">Loading</h1>
+      <p id="hero-desc">Loading catalog...</p>
+      <div class="actions">
+        <a href="#" id="play-btn" class="btn-play" onclick="handlePlay(event)">Play</a>
+        <button class="btn-icon" id="fav-btn" onclick="toggleFavorite()">
+          <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- REAL WIDGETS -->
+    <div class="widgets-grid">
+      <!-- Recently Played -->
+      <div class="widget">
+        <div class="widget-header">
+          <span>Recently Played</span>
+          <svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+        </div>
+        <div class="widget-games" id="recent-widget"></div>
+      </div>
+
+      <!-- Favorites -->
+      <div class="widget">
+        <div class="widget-header">
+          <span>Your Favorites</span>
+          <svg viewBox="0 0 24 24"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+        </div>
+        <div class="widget-games" id="fav-widget"></div>
+      </div>
+
+      <!-- Enrichment Engine -->
+      <div class="widget">
+        <div class="widget-header">
+          <span>GitHub Enrichment</span>
+          <svg viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+        </div>
+        <div style="font-size:12px;color:#aaa;margin-bottom:8px" id="enrich-stats">0 of 65 games enriched.</div>
+        <button class="btn-action" id="enrich-btn" onclick="runEnrichment()">
+          ✨ Fetch Real Cover Art
+        </button>
+      </div>
+
+      <!-- Catalog Stats -->
+      <div class="widget">
+        <div class="widget-header">
+          <span>Catalog Storage</span>
+          <svg viewBox="0 0 24 24"><path d="M20 6H4c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm0 10H4V8h16v8z"/></svg>
+        </div>
+        <div class="storage-text"><span>Total Games</span><span id="total-games-text">65</span></div>
+        <div class="storage-bar">
+          <div class="storage-fill" id="playable-bar" style="width: 100%"></div>
+        </div>
+        <div class="storage-text" style="margin-top:8px"><span>Playable Demos</span><span id="playable-count-text">65</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PROFILE MODAL -->
+<div class="overlay" id="profile-modal" onclick="closeModal('profile-modal', event)">
+  <div class="overlay-panel">
+    <div class="panel-header">
+      <h2>Profile</h2>
+      <button class="close-btn" onclick="closeModal('profile-modal', event)">×</button>
+    </div>
+    
+    <div class="profile-top">
+      <div class="profile-avatar-large"><img id="profile-avatar-large" src="" alt="Avatar"></div>
+      <div class="profile-info">
+        <label>Display Name</label>
+        <input type="text" class="input-field" id="input-username" placeholder="Enter username">
+        <button class="btn-secondary" onclick="cycleAvatar()">🎲 Change Avatar</button>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-box">
+        <h3 id="stat-favs">0</h3>
+        <p>Favorites</p>
+      </div>
+      <div class="stat-box">
+        <h3 id="stat-played">0</h3>
+        <p>Recently Played</p>
+      </div>
+    </div>
+    
+    <button class="btn-play" style="width: 100%; margin-top: 12px;" onclick="saveProfile()">Save Changes</button>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="settings-modal" onclick="closeModal('settings-modal', event)">
+  <div class="overlay-panel">
+    <div class="panel-header">
+      <h2>System Settings</h2>
+      <button class="close-btn" onclick="closeModal('settings-modal', event)">×</button>
+    </div>
+    
+    <div class="settings-group">
+      <h3>Display</h3>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Show Live Clock</div>
+          <div class="setting-desc">Toggle the time in the top bar</div>
+        </div>
+        <button class="toggle active" id="toggle-clock" onclick="toggleSetting('clock')"></button>
+      </div>
+      <div class="setting-row">
+        <div>
+          <div class="setting-label">Blur Background</div>
+          <div class="setting-desc">Apply a blur filter to game art</div>
+        </div>
+        <button class="toggle" id="toggle-blur" onclick="toggleSetting('blur')"></button>
+      </div>
+    </div>
+    
+    <div class="settings-group">
+      <h3>Data Management</h3>
+      <div class="setting-desc" style="margin-bottom: 12px;">Clearing data will remove your favorites, recently played list, and any enriched cover art. This cannot be undone.</div>
+      <button class="btn-danger" onclick="resetData()">⚠️ Clear All Local Data</button>
+    </div>
+
+    <div class="settings-group">
+      <h3>System Info</h3>
+      <div class="setting-row">
+        <div class="setting-label">OS Version</div>
+        <div class="setting-desc">GameVault 1.0.0 (Web)</div>
+      </div>
+      <div class="setting-row">
+        <div class="setting-label">Games Loaded</div>
+        <div class="setting-desc" id="settings-total-games">65</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BROWSE SCREEN -->
+<div id="browse-screen">
+  <div class="browse-header">
+    <h2>Game Library</h2>
+    <div style="display:flex; gap:20px; align-items:center;">
+      <input type="text" class="search-input" placeholder="Search catalog..." id="search-input" onkeyup="filterGames()">
+      <button class="btn-play" onclick="closeBrowse()" style="padding: 10px 24px;">Back to OS</button>
+    </div>
+  </div>
+  <div class="game-grid" id="game-grid"></div>
+</div>
+
+<div id="toast">Notification</div>
+
+<script>
+  // ─── RAW CATALOG DATA ───
+  // NOTE: The 5th item is now the Custom Image URL. GTA III has been updated with your Rockstar link.
+  const RAW = [
+    ["Grand Theft Auto III","https://wasmarcade.com/gta3","",1,"https://media-rockstargames-com.akamaized.net/mfe-r19/prod/__common/img/b0353d1406b5264dc18326a811bc5bb5.jpg"],
+    ["Grand Theft Auto: Vice City","https://joncodeofficial.github.io/gta-vice-city-wasm/","",1],["Halo: Combat Evolved","https://mitchellhynes.com/halo/halo.html","",1],["Call of Duty: Black Ops Zombies","http://vel.gg/bo1z","",1],["Call of Duty: Modern Warfare 2","https://ovz-game-production.up.railway.app","",1],["Diablo","https://d07riv.github.io/diabloweb/","https://github.com/d07RiV/diabloweb",1],["Doom 3","https://gn-math.dev/?id=626","https://github.com/web-ports/doom-3",1],["Quake III Arena","https://q3.pieter.com","",1],["Quake II","https://q2.pieter.com","",1],["Half-Life","http://pixelsuft.github.io/hl/","https://github.com/Pixelsuft/hl",1],["Counter-Strike 1.6","https://csjs.live","",1],["Command & Conquer: Red Alert 2","https://chronodivide.com/","",1],["Command & Conquer: Generals Zero Hour","https://generals.wasm.ltd","",1],["The Simpsons: Hit & Run","https://glitchmod.com/games/the-simpsons-hit-run/mods/port-simpsons-hit-and-run","",1],["Return to Castle Wolfenstein","https://rtcw.pieter.com","",1],["Minecraft (EaglercraftX)","https://wasmarcade.com/minecraft","",0],["Sonic 3 A.I.R.","https://burnedpopcorn.github.io/","https://github.com/burnedpopcorn/sonic3air-webport",0],["Crash Bash Online","https://crashbash.app/","",0],["Crash Team Racing (High Octane)","https://rinnegatamante.github.io/Crash-Team-Racing-High-Octane/","",0],["Animal Crossing","https://retrogamescenter.ru/ports/ac-webport-main/index.html","https://github.com/web-ports/ac-gamecube",0],["Bendy and The Ink Machine","https://gn-math.github.io/web-port/bendy/","https://github.com/genizy/web-port/tree/main/bendy",0],["Brotato","https://gn-math.dev/?id=723","https://github.com/BlueGameMC/BrotatoWeb",0],["Buckshot Roulette","https://gn-math.github.io/web-port/buckshot-roulette/","https://github.com/genizy/web-port/tree/main/buckshot-roulette",0],["Celeste","https://gn-math.dev/?id=623","https://github.com/MercuryWorkshop/celeste-wasm",0],["Cuphead","https://gn-math.github.io/web-port/cuphead/","https://github.com/genizy/web-port/tree/main/cuphead",0],["Deltarune","https://aukak.itch.io/deltarune","",0],["Undertale (Deltatraveler)","https://gn-math.dev/?id=560","",0],["Baldi's Basics Plus","https://gn-math.github.io/web-port/baldi-plus/","https://github.com/genizy/web-port/tree/main/baldi-plus",0],["Baldi's Basics Classic Remastered","https://gn-math.github.io/web-port/baldi-remaster/","https://github.com/genizy/web-port/tree/main/baldi-remaster",0],["Amanda The Adventurer","https://gn-math.github.io/web-port/amanda-the-adventurer/","https://github.com/genizy/web-port/tree/main/amanda-the-adventurer",0],["Class of '09","https://gn-math.github.io/web-port/class-of-09/","https://github.com/genizy/web-port/tree/main/class-of-09",0],["Dead Plate","https://gn-math.github.io/web-port/dead-plate/","https://github.com/genizy/web-port/tree/main/dead-plate",0],["Cruelty Squad","https://gn-math.dev/?id=825","https://github.com/imt00dizzy/cruelty-squad",0],["Antonblast","https://gn-math.dev/?id=711","https://github.com/web-ports/antonblast",0],["Clustertruck","https://wasm.rip/files/ClusterTruck/clustertruck.html","https://github.com/wasmdotrip/Clustertruck-Port",0],["20 Minutes Till Dawn","https://gn-math.dev/?id=819","https://github.com/web-ports/20-minutes",0],["Among Us","https://wasm.rip/files/amongus/index.html","https://github.com/wasmdotrip/AmongUsPort",0],["Cave Story","https://midzer.de/wasm/cavestory/","https://github.com/midzer/nxengine-evo",0],["Cro-Mag Rally","https://midzer.de/wasm/cromagrally/","https://github.com/midzer/CroMagRally",0],["Descent (DXX-Rebirth)","https://midzer.de/wasm/descent1/","https://github.com/midzer/dxx-rebirth",0],["Commander Keen","https://www.jamesfmackenzie.com/chocolatekeen/","https://github.com/jamesfmackenzie/chocolatekeen",0],["Carmageddon","https://rgc.zone/ports/carmaweb/index.html","https://github.com/Carter54git/dethrace-ported-to-web",0],["3D Pinball – Space Cadet","https://ksylvestre.itch.io/space-cadet-pinball","https://github.com/k4zmu2a/SpaceCadetPinball",0],["Battle City","https://battle-city.berrry.app","https://github.com/vgrichina/battlecity",0],["Beneath a Steel Sky","https://scummweb.tsilva.eu/beneath-a-steel-sky/play","",0],["Caesar II","https://second-impressions.github.io/caesar2-port/","",0],["Daytona USA","https://johannruiz.github.io/Daytona-USA-Web/","",0],["Daggerfall","https://daggerfalljs.dev/","",0],["Cut the Rope DX","https://yell0wsuit.github.io/cuttherope-dx/","",0],["Bad Piggies","https://gn-math.dev/?id=752","",0],["Call of Duty Web Collection","https://cod-webports.pages.dev/","",0],["Call of Mini: Dino Hunter","https://comdh.krig.games/","",0],["Chasm: The Rift","https://rgc.zone/ports/chasmweb/run.html","",0],["Brutal Doom","https://rgc.zone/ports/brutaldoom/index.html","",0],["DOOM I & II","https://retrogamescenter.ru/ports/truedoom/index.html","",0],["Duke Nukem 3D","https://retrogamescenter.ru/ports/duke3dtg/index.html","",0],["LEGO Island","https://isle.pizza/","",0],["WipEout","https://glitchmod.com/games/wipeout/mods/port-wipeout","",0],["Skate 3 Fan Game","https://glitchmod.com/games/skate-3/mods/port-skate-3","",0],["PES 6","http://pes6.optijuegos.net","",0],["Urban Terror","https://ut.pieter.com","",0],["QuakeWorld","https://q1.pieter.com","",0],["NetQuake","https://www.netquake.io/","",0],["Doom Multiplayer (Silent Space Marine)","https://silentspacemarine.com/","",0],["Nacht der Untoten (CoD Zombies)","https://zombies.bitcoinsapi.com/","",0]
+  ];
+
+  // ─── STORAGE HELPERS ───
+  const store = {
+    get(k, f) { try { return JSON.parse(localStorage.getItem(k)) ?? f; } catch { return f; } },
+    set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+  const K = { 
+    fav: 'gv.fav.v1', 
+    recent: 'gv.recent.v1', 
+    enriched: 'gv.enriched.v1',
+    profile: 'gv.profile.v1',
+    settings: 'gv.settings.v1'
+  };
+
+  // ─── STATE ───
+  let activeIndex = 0;
+  let currentAvatarSeed = 'Felix';
+  let currentUsername = 'Player 1';
+  let settings = { showClock: true, blurBackground: false };
+
+  function loadSettings() {
+    const s = store.get(K.settings, null);
+    if (s) settings = s;
+    const p = store.get(K.profile, null);
+    if (p) {
+      currentAvatarSeed = p.seed;
+      currentUsername = p.username;
+    } else {
+      store.set(K.profile, { seed: currentAvatarSeed, username: currentUsername });
+    }
+    
+    document.getElementById('clock').classList.toggle('hidden', !settings.showClock);
+    document.getElementById('toggle-clock').classList.toggle('active', settings.showClock);
+    document.getElementById('toggle-blur').classList.toggle('active', settings.blurBackground);
+    if (settings.blurBackground) {
+      document.getElementById('hero-bg').style.filter = 'blur(10px)';
+    }
+    
+    updateAvatar();
+  }
+
+  function updateAvatar() {
+    const url = `https://api.dicebear.com/7.x/avataaars/svg?seed=${currentAvatarSeed}`;
+    document.getElementById('top-avatar').src = url;
+    document.getElementById('profile-avatar-large').src = url;
+    document.getElementById('input-username').value = currentUsername;
+  }
+
+  function getFavorites() { return store.get(K.fav, []); }
+  function getRecent() { return store.get(K.recent, []); }
+  function getEnriched() { return store.get(K.enriched, {}); }
+
+  // ─── DATA PARSING ───
+  function slugKey(t) { return t.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'game'; }
+  function hue(str) { let h = 0; for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0; return h % 360; }
+  
+  // Destructuring the new 5th item (customImg)
+  const games = RAW.map(([title, demo, repo, featured, customImg]) => ({
+    id: slugKey(title),
+    title: title,
+    demoUrl: demo,
+    repoUrl: repo,
+    hue: hue(title),
+    customCover: customImg || null 
+  }));
+
+  function getGameData(game) {
+    const e = getEnriched()[game.id];
+    return {
+      ...game,
+      // Use custom image first, then enriched image, then null
+      cover: game.customCover || e?.coverUrl || null,
+      description: e?.description || 'A classic web port. Click Play to launch.',
+      hasRepo: !!game.repoUrl
+    };
+  }
+
+  // ─── UI INITIALIZATION ───
+  function createParticles() {
+    const container = document.getElementById('particles');
+    for (let i = 0; i < 30; i++) {
+      let p = document.createElement('div');
+      p.className = 'particle';
+      p.style.left = Math.random() * 100 + '%';
+      p.style.animationDelay = Math.random() * 4 + 's';
+      p.style.animationDuration = (Math.random() * 3 + 3) + 's';
+      container.appendChild(p);
+    }
+  }
+  createParticles();
+
+  function wakeSystem() {
+    document.getElementById('boot-screen').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('boot-screen').style.display = 'none';
+      document.getElementById('main-ui').classList.add('active');
+      selectGame(0); 
+    }, 800);
+  }
+
+  function updateClock() {
+    if (!settings.showClock) return;
+    const now = new Date();
+    let hours = now.getHours();
+    const mins = String(now.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    document.getElementById('clock').textContent = `${hours}:${mins} ${ampm}`;
+  }
+  setInterval(updateClock, 1000);
+
+  // ─── PROFILE & SETTINGS LOGIC ───
+  function openProfile() {
+    document.getElementById('stat-favs').textContent = getFavorites().length;
+    document.getElementById('stat-played').textContent = getRecent().length;
+    document.getElementById('profile-modal').classList.add('active');
+  }
+
+  function openSettings() {
+    document.getElementById('settings-total-games').textContent = games.length;
+    document.getElementById('settings-modal').classList.add('active');
+  }
+
+  function closeModal(id, event) {
+    if (event && event.target !== event.currentTarget) return; 
+    document.getElementById(id).classList.remove('active');
+  }
+
+  function cycleAvatar() {
+    const seeds = ['Felix', 'Aneka', 'Mia', 'Zoe', 'Jack', 'Leo', 'Nala', 'Oscar'];
+    let currentIndex = seeds.indexOf(currentAvatarSeed);
+    currentAvatarSeed = seeds[(currentIndex + 1) % seeds.length];
+    updateAvatar();
+  }
+
+  function saveProfile() {
+    const newName = document.getElementById('input-username').value.trim() || 'Player 1';
+    currentUsername = newName;
+    store.set(K.profile, { seed: currentAvatarSeed, username: currentUsername });
+    showToast("Profile Saved");
+    closeModal('profile-modal');
+  }
+
+  function toggleSetting(setting) {
+    if (setting === 'clock') {
+      settings.showClock = !settings.showClock;
+      document.getElementById('toggle-clock').classList.toggle('active', settings.showClock);
+      document.getElementById('clock').classList.toggle('hidden', !settings.showClock);
+    } else if (setting === 'blur') {
+      settings.blurBackground = !settings.blurBackground;
+      document.getElementById('toggle-blur').classList.toggle('active', settings.blurBackground);
+      document.getElementById('hero-bg').style.filter = settings.blurBackground ? 'blur(10px)' : 'none';
+    }
+    store.set(K.settings, settings);
+  }
+
+  function resetData() {
+    if (confirm("Are you sure you want to delete all favorites, recents, and enriched cover art?")) {
+      localStorage.removeItem(K.fav);
+      localStorage.removeItem(K.recent);
+      localStorage.removeItem(K.enriched);
+      store.set(K.settings, { showClock: true, blurBackground: false });
+      showToast("Local Data Cleared");
+      setTimeout(() => location.reload(), 1500);
+    }
+  }
+
+  // ─── MAIN UI LOGIC ───
+  function renderCarousel() {
+    const container = document.getElementById('carousel');
+    container.innerHTML = '';
+    
+    games.forEach((game, index) => {
+      const data = getGameData(game);
+      const item = document.createElement('div');
+      item.className = `carousel-item ${index === activeIndex ? 'active' : ''}`;
+      item.dataset.index = index;
+      
+      if (data.cover) {
+        item.style.backgroundImage = `url('${data.cover}')`;
+      } else {
+        item.style.background = `linear-gradient(135deg, hsl(${game.hue} 60% 30%), hsl(${game.hue+40} 50% 10%))`;
+        item.innerHTML = `<div class="fallback-cover">${game.title.slice(0,2)}</div>`;
+      }
+      
+      item.onclick = () => selectGame(index);
+      item.onmouseenter = () => selectGame(index);
+      container.appendChild(item);
+    });
+
+    const lib = document.createElement('div');
+    lib.className = 'carousel-item';
+    lib.style.background = 'rgba(255,255,255,0.1)';
+    lib.innerHTML = `<svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>`;
+    lib.onclick = openBrowse;
+    container.appendChild(lib);
+  }
+
+  function selectGame(index) {
+    activeIndex = index;
+    const game = getGameData(games[index]);
+
+    const items = document.querySelectorAll('.carousel-item');
+    items.forEach((item, i) => {
+      if (item.dataset.index == index) {
+        item.classList.add('active');
+        item.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+      } else {
+        item.classList.remove('active');
+      }
+    });
+
+    const bg = document.getElementById('hero-bg');
+    if (game.cover) {
+      bg.style.backgroundImage = `url('${game.cover}')`;
+      bg.style.backgroundColor = '#000';
+    } else {
+      bg.style.backgroundImage = 'none';
+      bg.style.backgroundColor = `hsl(${game.hue} 50% 10%)`;
+    }
+
+    document.getElementById('hero-content').style.opacity = '0';
+    setTimeout(() => {
+      document.getElementById('hero-title').textContent = game.title;
+      document.getElementById('hero-desc').textContent = game.description;
+      document.getElementById('selected-title').textContent = game.title;
+      
+      const playBtn = document.getElementById('play-btn');
+      playBtn.href = game.demoUrl;
+      
+      const favBtn = document.getElementById('fav-btn');
+      const isFav = getFavorites().includes(game.id);
+      favBtn.classList.toggle('active', isFav);
+      
+      document.getElementById('hero-content').style.opacity = '1';
+    }, 150);
+  }
+
+  function toggleFavorite() {
+    const game = games[activeIndex];
+    let favs = getFavorites();
+    if (favs.includes(game.id)) {
+      favs = favs.filter(id => id !== game.id);
+      showToast("Removed from Favorites");
+    } else {
+      favs.push(game.id);
+      showToast("Added to Favorites");
+    }
+    store.set(K.fav, favs);
+    selectGame(activeIndex); 
+    renderWidgets();
+  }
+
+  function handlePlay(e) {
+    let recents = getRecent().filter(x => x.id !== games[activeIndex].id);
+    recents.unshift({ id: games[activeIndex].id, at: Date.now() });
+    store.set(K.recent, recents.slice(0, 10));
+    renderWidgets();
+  }
+
+  function renderWidgets() {
+    const recentEl = document.getElementById('recent-widget');
+    const favEl = document.getElementById('fav-widget');
+    
+    const recents = getRecent().map(r => games.find(g => g.id === r.id)).filter(Boolean);
+    if (recents.length === 0) {
+      recentEl.innerHTML = '<div style="font-size:12px;color:#888;">Play a game to see it here.</div>';
+    } else {
+      recentEl.innerHTML = recents.slice(0, 4).map(g => {
+        const data = getGameData(g);
+        const bg = data.cover ? `url('${data.cover}')` : `linear-gradient(135deg, hsl(${g.hue} 60% 30%), #000)`;
+        return `<div class="widget-game-cover" style="background-image:${bg}" onclick="selectGame(${games.indexOf(g)})"></div>`;
+      }).join('');
+    }
+
+    const favs = getFavorites().map(id => games.find(g => g.id === id)).filter(Boolean);
+    if (favs.length === 0) {
+      favEl.innerHTML = '<div style="font-size:12px;color:#888;">No favorites yet.</div>';
+    } else {
+      favEl.innerHTML = favs.slice(0, 4).map(g => {
+        const data = getGameData(g);
+        const bg = data.cover ? `url('${data.cover}')` : `linear-gradient(135deg, hsl(${g.hue} 60% 30%), #000)`;
+        return `<div class="widget-game-cover" style="background-image:${bg}" onclick="selectGame(${games.indexOf(g)})"></div>`;
+      }).join('');
+    }
+
+    const enriched = Object.keys(getEnriched()).length;
+    document.getElementById('enrich-stats').textContent = `${enriched} of ${games.length} games enriched.`;
+    
+    document.getElementById('total-games-text').textContent = games.length;
+    const playable = games.filter(g => g.demoUrl).length;
+    document.getElementById('playable-count-text').textContent = playable;
+  }
+
+  // ─── ENRICHMENT ───
+  async function runEnrichment() {
+    const btn = document.getElementById('enrich-btn');
+    btn.disabled = true;
+    btn.textContent = 'Fetching...';
+    
+    let enriched = getEnriched();
+    let count = 0;
+    
+    for (const game of games) {
+      if (!game.repoUrl) continue;
+      // Skip if already custom or enriched
+      if (game.customCover || enriched[game.id]) continue; 
+      
+      const m = game.repoUrl.match(/github\.com\/([^/]+)\/([^/?#]+)/i);
+      if (!m) continue;
+      
+      try {
+        const res = await fetch(`https://ungh.cc/repos/${m[1]}/${m[2]}`);
+        if (res.ok) {
+          const data = await res.json();
+          const r = data.repo || data;
+          if (r && (r.description || r.stars)) {
+            enriched[game.id] = {
+              description: r.description || '',
+              coverUrl: `https://opengraph.githubassets.com/1/${m[1]}/${m[2]}`
+            };
+            count++;
+            store.set(K.enriched, enriched);
+          }
+        }
+      } catch(e) {}
+      await new Promise(r => setTimeout(r, 100));
+    }
+    
+    btn.textContent = `✨ Enrichment Complete (${count} new)`;
+    setTimeout(() => {
+      btn.disabled = false;
+      btn.textContent = '✨ Fetch Real Cover Art';
+      renderCarousel();
+      selectGame(activeIndex);
+      renderWidgets();
+    }, 2000);
+  }
+
+  // ─── BROWSE SCREEN ───
+  function openBrowse() {
+    document.getElementById('browse-screen').classList.add('active');
+    renderGrid(games);
+  }
+
+  function closeBrowse() {
+    document.getElementById('browse-screen').classList.remove('active');
+  }
+
+  function renderGrid(gameList) {
+    const grid = document.getElementById('game-grid');
+    grid.innerHTML = '';
+    
+    gameList.forEach(game => {
+      const data = getGameData(game);
+      const div = document.createElement('div');
+      div.className = 'grid-item';
+      
+      let bgStyle = data.cover 
+        ? `background-image: url('${data.cover}')` 
+        : `background: linear-gradient(135deg, hsl(${game.hue} 60% 30%), #000);`;
+
+      div.innerHTML = `
+        <div class="grid-cover" style="${bgStyle}">
+          ${data.cover ? '' : game.title.slice(0,2)}
+        </div>
+        <div class="grid-title">${game.title}</div>
+      `;
+      div.onclick = () => {
+        closeBrowse();
+        const idx = games.findIndex(g => g.id === game.id);
+        if (idx !== -1) selectGame(idx);
+      };
+      grid.appendChild(div);
+    });
+  }
+
+  function filterGames() {
+    const query = document.getElementById('search-input').value.toLowerCase();
+    const filtered = games.filter(g => g.title.toLowerCase().includes(query));
+    renderGrid(filtered);
+  }
+
+  // ─── TOAST ───
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+
+  // ─── KEYBOARD NAVIGATION ───
+  document.addEventListener('keydown', (e) => {
+    if (document.getElementById('boot-screen').style.display !== 'none') {
+      if (e.key === 'Enter') wakeSystem();
+      return;
+    }
+
+    if (document.getElementById('browse-screen').classList.contains('active')) {
+      if (e.key === 'Escape') closeBrowse();
+      return;
+    }
+
+    if (document.getElementById('profile-modal').classList.contains('active') || document.getElementById('settings-modal').classList.contains('active')) {
+      if (e.key === 'Escape') {
+        closeModal('profile-modal');
+        closeModal('settings-modal');
+      }
+      return;
+    }
+
+    if (e.key === 'ArrowRight') {
+      selectGame((activeIndex + 1) % games.length);
+    } else if (e.key === 'ArrowLeft') {
+      selectGame((activeIndex - 1 + games.length) % games.length);
+    } else if (e.key === 'Enter') {
+      handlePlay(e);
+      window.open(games[activeIndex].demoUrl, '_blank');
+    }
+  });
+
+  // Initialize
+  loadSettings();
+  updateClock();
+  renderCarousel();
+  renderWidgets();
+</script>
+</body>
+</html>
